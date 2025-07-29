@@ -972,9 +972,9 @@ with tab_dashboard_main:
     st.subheader("🔝 Top 5 Dự Án Theo Giờ")
     fig_top_projects = px.bar(
         top_projects,
-        x="Project Name",
+        x="Project name",
         y="Hours",
-        color="Project Name",
+        color="Project name",
         text_auto=".2s",
         title="Top 5 Dự Án"
     )
