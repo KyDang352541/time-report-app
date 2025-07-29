@@ -1052,16 +1052,16 @@ with tab_dashboard_main:
     )
     st.plotly_chart(fig_top_projects, use_container_width=True)
     if st.button("📄 Xuất báo cáo PDF cho Dashboard này"):
-    pdf_path = export_dashboard_to_pdf(
-        current_month=current_month,
-        selected_week=selected_week,
-        total_hours_week=total_hours_week,
-        total_hours_month=total_hours_month,
-        chart_images=[
-            ("Top 5 dự án trong tuần", chart_path_1),
-            ("Tỷ lệ team trong tuần", chart_path_2),
-            ("Team theo dự án", chart_path_3)
-        ]
-    )
-    with open(pdf_path, "rb") as f:
-        st.download_button("📥 Tải về báo cáo PDF", f, file_name=os.path.basename(pdf_path))
+        pdf_path = export_dashboard_to_pdf(
+            current_month=current_month,
+            selected_week=selected_week,
+            total_hours_week=total_hours_week,
+            total_hours_month=total_hours_month,
+            chart_images=[
+                ("Top 5 dự án trong tuần", chart_path_1),
+                ("Tỷ lệ team trong tuần", chart_path_2),
+                ("Team theo dự án", chart_path_3)
+            ]
+        )
+        with open(pdf_path, "rb") as f:
+            st.download_button("📥 Tải về báo cáo PDF", f, file_name=os.path.basename(pdf_path))
