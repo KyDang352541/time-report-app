@@ -2,6 +2,8 @@ import streamlit as st
 import os
 import pandas as pd
 from datetime import datetime
+import plotly.express as px
+
 
 
 # ==============================================================================
@@ -318,11 +320,13 @@ if not os.path.exists(path_dict['template_file']):
 @st.cache_data(ttl=1800)
 def cached_load():
     df_raw = load_raw_data(path_dict['template_file'])
+    df = df_raw.copy()
     config_data = read_configs(path_dict['template_file'])
     return df_raw, config_data
 
 with st.spinner(get_text('loading_data')):
     df_raw, config_data = cached_load()
+    df = df_raw.copy()  # ✅ THÊM DÒNG NÀY ở đây
 
 if df_raw.empty:
     st.error(get_text('failed_to_load_raw_data'))
@@ -336,14 +340,14 @@ all_projects = sorted(df_raw['Project name'].dropna().unique().tolist())
 
 
 # Main interface tabs
-tab_standard_report_main, tab_comparison_report_main, tab_data_preview_main, tab_user_guide_main, tab_help_main = st.tabs([
+tab_dashboard_main, tab_standard_report_main, tab_comparison_report_main, tab_data_preview_main, tab_user_guide_main, tab_help_main = st.tabs([
+    "📈 Dashboard",
     get_text('tab_standard_report'),
     get_text('tab_comparison_report'),
     get_text('tab_data_preview'),
     get_text('user_guide'),
-    get_text("tab_help")   # <-- phải đúng key trong text_dict
+    get_text("tab_help")
 ])
-
 # =========================================================================
 # STANDARD REPORT TAB
 # =========================================================================
@@ -946,3 +950,58 @@ with tab_help_main:
 
     st.markdown(f"### {get_text('tab_help', lang)}")
     st.markdown(get_text("help_instruction_simple", lang))
+with tab_dashboard_main:
+    st.header("📊 Tổng Quan Hệ Thống")
+
+    # Xử lý định dạng ngày nếu chưa có
+    df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
+
+    # Tổng giờ làm
+    total_hours = df['Hours'].sum()
+    st.metric(label="Tổng Giờ Làm", value=f"{total_hours:,.1f} giờ")
+
+    # Top 5 dự án theo giờ
+    top_projects = (
+        df.groupby("Project Name")["Hours"]
+        .sum()
+        .sort_values(ascending=False)
+        .head(5)
+        .reset_index()
+    )
+
+    st.subheader("🔝 Top 5 Dự Án Theo Giờ")
+    fig_top_projects = px.bar(
+        top_projects,
+        x="Project Name",
+        y="Hours",
+        color="Project Name",
+        text_auto=".2s",
+        title="Top 5 Dự Án"
+    )
+    st.plotly_chart(fig_top_projects, use_container_width=True)
+
+    # Tổng giờ theo tháng
+    df['Month'] = df['Date'].dt.to_period('M').astype(str)
+    month_summary = df.groupby("Month")["Hours"].sum().reset_index()
+
+    st.subheader("📅 Giờ Làm Theo Tháng")
+    fig_month = px.line(
+        month_summary,
+        x="Month",
+        y="Hours",
+        markers=True,
+        title="Tổng Giờ Theo Tháng"
+    )
+    st.plotly_chart(fig_month, use_container_width=True)
+
+    # Tỉ lệ theo Workcentre
+    workcentre_summary = df.groupby("Workcentre")["Hours"].sum().reset_index()
+
+    st.subheader("🏗️ Phân Bổ Theo Workcentre")
+    fig_wc = px.pie(
+        workcentre_summary,
+        values="Hours",
+        names="Workcentre",
+        title="Tỉ Lệ Workcentre"
+    )
+    st.plotly_chart(fig_wc, use_container_width=True)
