@@ -952,37 +952,39 @@ with tab_help_main:
     st.markdown(get_text("help_instruction_simple", lang))
     
 with tab_dashboard_main:
-    st.header("📈 Dashboard – Tổng Quan Hiện Tại")
+    st.subheader("📊 Tổng Quan Nhanh")
 
-    # ✅ Lấy thông tin thời gian hiện tại
+    # 👉 Xác định thời gian hiện tại
     today = datetime.today()
     current_year = today.year
-    current_week = today.isocalendar().week
-    current_month = today.month
+    current_month = today.strftime('%B')
+    current_week = today.isocalendar()[1]
 
-    # ✅ Chuyển cột Date sang datetime nếu chưa có
-    df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
-    df['Year'] = df['Date'].dt.year
-    df['Month'] = df['Date'].dt.month
-    df['Week'] = df['Date'].dt.isocalendar().week
+    # ✅ Tính tuần trước
+    if current_week > 1:
+        last_week = current_week - 1
+        year_for_last_week = current_year
+    else:
+        last_week = datetime(current_year - 1, 12, 28).isocalendar()[1]
+        year_for_last_week = current_year - 1
 
-    # ✅ Lọc theo tuần & tháng hiện tại
-    df_week = df[(df['Year'] == current_year) & (df['Week'] == current_week)]
-    df_month = df[(df['Year'] == current_year) & (df['Month'] == current_month)]
+    # ✅ Lọc dữ liệu cho tuần trước và tháng hiện tại
+    df_week = df[(df['Year'] == year_for_last_week) & (df['Week'] == last_week)]
+    df_month = df[(df['Year'] == current_year) & (df['MonthName'] == current_month)]
 
-    # ⏱️ KPI – Tổng giờ trong tuần và tháng
+    # ✅ Tính tổng giờ
     total_week_hours = df_week['Hours'].sum()
     total_month_hours = df_month['Hours'].sum()
 
+    # ✅ Hiển thị KPI
     col1, col2 = st.columns(2)
     with col1:
-        st.metric("🗓️ Tổng giờ tuần này", f"{total_week_hours:.1f}h")
+        st.metric("🗓️ Tổng giờ **tuần trước**", f"{total_week_hours:.1f}h")
     with col2:
-        st.metric("📆 Tổng giờ tháng này", f"{total_month_hours:.1f}h")
+        st.metric("📆 Tổng giờ **tháng hiện tại**", f"{total_month_hours:.1f}h")
 
-    st.markdown("---")
-
-    # 🔝 Top 5 dự án theo giờ trong tháng
+    # ✅ Top 5 dự án theo giờ trong tháng
+    st.subheader("🔝 Top 5 Dự Án Theo Giờ (Trong Tháng)")
     top_projects = (
         df_month.groupby("Project name")["Hours"]
         .sum()
@@ -990,48 +992,14 @@ with tab_dashboard_main:
         .head(5)
         .reset_index()
     )
-
-    st.subheader("🏗️ Top 5 Dự Án Trong Tháng")
     fig_top_projects = px.bar(
         top_projects,
         x="Project name",
         y="Hours",
-        text_auto=True,
-        title="Top 5 dự án theo giờ tháng này"
+        color="Project name",
+        title="Top 5 Dự Án",
+        labels={"Hours": "Giờ làm", "Project name": "Dự án"},
+        template="plotly_white"
     )
     st.plotly_chart(fig_top_projects, use_container_width=True)
 
-    # 📊 Tổng giờ theo workcentre – biểu đồ tròn
-    st.subheader("🔧 Phân Bổ Giờ Theo Workcentre (Tháng)")
-    workcentre_hours = (
-        df_month.groupby("Workcentre")["Hours"]
-        .sum()
-        .sort_values(ascending=False)
-        .reset_index()
-    )
-    fig_pie = px.pie(
-        workcentre_hours,
-        names="Workcentre",
-        values="Hours",
-        title="Tỉ lệ giờ theo Workcentre",
-        hole=0.4
-    )
-    st.plotly_chart(fig_pie, use_container_width=True)
-
-    # 📈 Biểu đồ giờ làm theo từng ngày trong tuần
-    st.subheader("📅 Giờ Làm Theo Ngày (Tuần Này)")
-    df_week['DayName'] = df_week['Date'].dt.strftime('%A')
-    day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    hours_by_day = (
-        df_week.groupby('DayName')['Hours']
-        .sum()
-        .reindex(day_order)
-        .reset_index()
-    )
-    fig_line = px.line(
-        hours_by_day,
-        x="DayName", y="Hours",
-        markers=True,
-        title="Biểu đồ giờ làm theo ngày trong tuần hiện tại"
-    )
-    st.plotly_chart(fig_line, use_container_width=True)
