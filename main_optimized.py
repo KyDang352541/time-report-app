@@ -6,6 +6,8 @@ import plotly.express as px
 import pdfkit
 from jinja2 import Template
 import uuid
+import os
+import tempfile
 
 
 
@@ -1003,54 +1005,71 @@ with tab_help_main:
 with tab_dashboard_main:
     st.subheader("📊 Tổng Quan Nhanh")
 
-    # 👉 Xác định thời gian hiện tại
+    # 👉 Thời gian hiện tại
     today = datetime.today()
     current_year = today.year
     current_month = today.strftime('%B')
     current_week = today.isocalendar()[1]
 
-    # ✅ Tính tuần trước
-    if current_week > 1:
-        last_week = current_week - 1
-        year_for_last_week = current_year
-    else:
-        last_week = datetime(current_year - 1, 12, 28).isocalendar()[1]
-        year_for_last_week = current_year - 1
+    # 👉 Chọn tuần trong tháng hiện tại
+    available_weeks = sorted(df[(df['Year'] == current_year) & (df['MonthName'] == current_month)]['Week'].unique())
+    selected_week = st.selectbox("🗓️ Chọn tuần trong tháng hiện tại", options=available_weeks, index=len(available_weeks)-1)
 
-    # ✅ Lọc dữ liệu cho tuần trước và tháng hiện tại
-    df_week = df[(df['Year'] == year_for_last_week) & (df['Week'] == last_week)]
+    # 👉 Lọc dữ liệu
+    df_week = df[(df['Year'] == current_year) & (df['Week'] == selected_week)]
     df_month = df[(df['Year'] == current_year) & (df['MonthName'] == current_month)]
 
-    # ✅ Tính tổng giờ
-    total_week_hours = df_week['Hours'].sum()
-    total_month_hours = df_month['Hours'].sum()
+    # 👉 Tính tổng giờ
+    total_hours_week = df_week['Hours'].sum()
+    total_hours_month = df_month['Hours'].sum()
 
-    # ✅ Hiển thị KPI
+    # 👉 Hiển thị metric
     col1, col2 = st.columns(2)
     with col1:
-        st.metric("🗓️ Tổng giờ **tuần trước**", f"{total_week_hours:.1f}h")
+        st.metric("🗓️ Tổng giờ tuần", f"{total_hours_week:.1f}h")
     with col2:
-        st.metric("📆 Tổng giờ **tháng hiện tại**", f"{total_month_hours:.1f}h")
+        st.metric("📆 Tổng giờ tháng", f"{total_hours_month:.1f}h")
 
-    # ✅ Top 5 dự án theo giờ trong tháng
-    st.subheader("🔝 Top 5 Dự Án Theo Giờ (Trong Tháng)")
+    # 👉 Top 5 dự án theo giờ (tuần)
     top_projects = (
-        df_month.groupby("Project name")["Hours"]
+        df_week.groupby("Project name")["Hours"]
         .sum()
         .sort_values(ascending=False)
         .head(5)
         .reset_index()
     )
-    fig_top_projects = px.bar(
-        top_projects,
-        x="Project name",
-        y="Hours",
-        color="Project name",
-        title="Top 5 Dự Án",
-        labels={"Hours": "Giờ làm", "Project name": "Dự án"},
-        template="plotly_white"
+    fig1 = px.bar(
+        top_projects, x="Project name", y="Hours", color="Project name",
+        title="🔝 Top 5 Dự Án Theo Giờ", template="plotly_white"
     )
-    st.plotly_chart(fig_top_projects, use_container_width=True)
+    st.plotly_chart(fig1, use_container_width=True)
+
+    # 👉 Tỉ lệ giờ theo team (pie)
+    team_ratio = df_week.groupby("Workcentre")["Hours"].sum().reset_index()
+    fig2 = px.pie(
+        team_ratio, names="Workcentre", values="Hours",
+        title="🧩 Tỷ Lệ Giờ Theo Team (Workcentre)", template="plotly_white"
+    )
+    st.plotly_chart(fig2, use_container_width=True)
+
+    # 👉 Phân bổ team theo dự án (stacked bar)
+    team_project = df_week.groupby(["Project name", "Workcentre"])["Hours"].sum().reset_index()
+    fig3 = px.bar(
+        team_project, x="Project name", y="Hours", color="Workcentre",
+        title="🏗️ Phân Bổ Team Theo Dự Án", template="plotly_white"
+    )
+    st.plotly_chart(fig3, use_container_width=True)
+
+    # 👉 Export các biểu đồ ra ảnh để gắn vào PDF
+    import tempfile
+    chart_path_1 = os.path.join(tempfile.gettempdir(), "chart1.png")
+    chart_path_2 = os.path.join(tempfile.gettempdir(), "chart2.png")
+    chart_path_3 = os.path.join(tempfile.gettempdir(), "chart3.png")
+
+    fig1.write_image(chart_path_1)
+    fig2.write_image(chart_path_2)
+    fig3.write_image(chart_path_3)
+
     if st.button("📄 Xuất báo cáo PDF cho Dashboard này"):
         pdf_path = export_dashboard_to_pdf(
             current_month=current_month,
