@@ -3,6 +3,9 @@ import os
 import pandas as pd
 from datetime import datetime
 import plotly.express as px
+import pdfkit
+from jinja2 import Template
+import uuid
 
 
 
@@ -100,6 +103,52 @@ if "user_email" not in st.session_state:
         else:
             st.error("❌ Email is not on the invitation list.")
     st.stop() # Dừng thực thi nếu chưa xác thực
+def export_dashboard_to_pdf(current_month, selected_week, total_hours_week, total_hours_month, chart_images):
+    html_template = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <title>Weekly Dashboard Report</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            h1 { color: #333; }
+            .metric { margin-bottom: 20px; }
+            .chart { margin-top: 30px; }
+            img { width: 100%; margin-top: 10px; }
+        </style>
+    </head>
+    <body>
+        <h1>📈 Weekly Dashboard Report</h1>
+        <p><strong>Tháng:</strong> {{ current_month }}, <strong>Tuần:</strong> {{ selected_week }}</p>
+        <div class="metric">
+            <p><strong>🔸 Tổng giờ trong tuần:</strong> {{ total_hours_week }}</p>
+            <p><strong>🔸 Tổng giờ trong tháng:</strong> {{ total_hours_month }}</p>
+        </div>
+
+        {% for chart_title, chart_path in chart_images %}
+        <div class="chart">
+            <h2>{{ chart_title }}</h2>
+            <img src="{{ chart_path }}">
+        </div>
+        {% endfor %}
+    </body>
+    </html>
+    """
+    template = Template(html_template)
+    rendered_html = template.render(
+        current_month=current_month,
+        selected_week=selected_week,
+        total_hours_week=total_hours_week,
+        total_hours_month=total_hours_month,
+        chart_images=chart_images
+    )
+
+    pdf_filename = f"dashboard_week_{selected_week}_{uuid.uuid4().hex[:6]}.pdf"
+    pdf_path = os.path.join(os.getcwd(), pdf_filename)
+
+    pdfkit.from_string(rendered_html, pdf_path)
+    return pdf_path
 
 # ---------------------------
 # PHẦN GIAO DIỆN CHÍNH CỦA ỨNG DỤNG
@@ -1002,4 +1051,17 @@ with tab_dashboard_main:
         template="plotly_white"
     )
     st.plotly_chart(fig_top_projects, use_container_width=True)
-
+    if st.button("📄 Xuất báo cáo PDF cho Dashboard này"):
+    pdf_path = export_dashboard_to_pdf(
+        current_month=current_month,
+        selected_week=selected_week,
+        total_hours_week=total_hours_week,
+        total_hours_month=total_hours_month,
+        chart_images=[
+            ("Top 5 dự án trong tuần", chart_path_1),
+            ("Tỷ lệ team trong tuần", chart_path_2),
+            ("Team theo dự án", chart_path_3)
+        ]
+    )
+    with open(pdf_path, "rb") as f:
+        st.download_button("📥 Tải về báo cáo PDF", f, file_name=os.path.basename(pdf_path))
