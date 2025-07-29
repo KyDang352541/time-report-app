@@ -962,7 +962,7 @@ with tab_dashboard_main:
 
     # Top 5 dự án theo giờ
     top_projects = (
-        df.groupby("Project Name")["Hours"]
+        df.groupby("Project name")["Hours"]
         .sum()
         .sort_values(ascending=False)
         .head(5)
