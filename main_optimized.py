@@ -1061,3 +1061,21 @@ with tab_dashboard_main:
         title="🏗️ Team Allocation by Project", template="plotly_white"
     )
     st.plotly_chart(fig3, use_container_width=True)
+
+def create_monthly_chart(df_filtered):
+    if 'MonthName' not in df_filtered.columns or 'Hours' not in df_filtered.columns:
+        return None
+
+    monthly_hours = df_filtered.groupby('MonthName')['Hours'].sum().reindex([
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ]).dropna()
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+    sns.barplot(x=monthly_hours.index, y=monthly_hours.values, ax=ax, palette='Blues_d')
+    ax.set_title("Monthly Total Hours")
+    ax.set_xlabel("Month")
+    ax.set_ylabel("Hours")
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    return fig
