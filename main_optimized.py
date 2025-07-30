@@ -151,6 +151,7 @@ TEXTS = {
         'no_year_selected_error': "Please select a valid year to generate the report.",
         'no_project_selected_warning_standard': "Please select at least one project to generate the standard report.",
         'no_data_after_filter_standard': "⚠️ No data after filtering for the standard report. Please check your selections.",
+        'latest_update_date': "Latest data update",
         'generating_excel_report': "Generating Excel report...",
         'excel_report_generated': "✅ Excel Report generated: {}",
         'download_excel_report': "📥 Download Excel Report",
@@ -249,6 +250,7 @@ TEXTS = {
         'select_projects_comp': "Chọn dự án(các dự án):", # Dùng chung cho các mode
         'generate_comparison_report_btn': "🚀 Tạo báo cáo so sánh",
         'no_data_after_filter_comparison': "⚠️ {}",
+        'latest_update_date': "Dữ liệu được cập nhật đến ngày",
         'data_filtered_success': "✅ Dữ liệu đã được lọc thành công cho so sánh.",
         'comparison_data_preview': "Xem trước dữ liệu so sánh",
         'generating_comparison_excel': "Đang tạo báo cáo Excel so sánh...",
@@ -333,6 +335,15 @@ def cached_load():
 with st.spinner(get_text('loading_data')):
     df_raw, config_data = cached_load()
     df = df_raw.copy()  # ✅ THÊM DÒNG NÀY ở đây
+# Hiển thị ngày cập nhật mới nhất
+if 'Date' in df_raw.columns:
+    latest_date = pd.to_datetime(df_raw['Date'], errors='coerce').max()
+    if pd.notnull(latest_date):
+        st.info(f"📅 {get_text('latest_update_date')}: {latest_date.strftime('%d/%m/%Y')}")
+    else:
+        st.warning(get_text('no_valid_dates_found'))
+else:
+    st.warning(get_text('date_column_missing'))
 
 if df_raw.empty:
     st.error(get_text('failed_to_load_raw_data'))
