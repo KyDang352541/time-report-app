@@ -605,14 +605,16 @@ with tab_standard_report_main:
                 # 👇 CHỈ THÊM PHẦN NÀY
                 st.subheader(get_text("preview_charts_title"))  # ví dụ: "📊 Biểu đồ xem trước"
                 fig_monthly = create_monthly_chart(df_filtered_standard, standard_report_config)
-                st.pyplot(fig_monthly)
+                if fig_monthly:
+                    st.plotly_chart(fig_monthly, use_container_width=True)
 
                 fig_task = create_task_chart(df_filtered_standard, standard_report_config)
-                st.pyplot(fig_task)
+                if fig_task:
+                    st.plotly_chart(fig_task, use_container_width=True)
 
                 fig_workcentre = create_workcentre_chart(df_filtered_standard, standard_report_config)
-                st.pyplot(fig_workcentre)
-
+                if fig_workcentre:
+                    st.plotly_chart(fig_workcentre, use_container_width=True)
                 st.markdown("---")
                 
                 today_str = datetime.today().strftime("%Y-%m-%d")  # ✅ Đúng cú pháp
