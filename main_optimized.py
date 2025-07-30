@@ -937,6 +937,22 @@ with tab_comparison_report_main:
                 st.success(get_text('data_filtered_success'))
                 st.subheader(get_text('comparison_data_preview'))
                 st.dataframe(df_filtered_comparison)
+                # 👇 Thêm biểu đồ xem trước (dùng plotly)
+                st.subheader(get_text("preview_charts_title"))  # 📊 Biểu đồ xem trước
+
+                fig_monthly = create_monthly_chart(df_filtered_comparison, comparison_config)
+                if fig_monthly:
+                    st.plotly_chart(fig_monthly, use_container_width=True)
+
+                fig_task = create_task_chart(df_filtered_comparison, comparison_config)
+                if fig_task:
+                    st.plotly_chart(fig_task, use_container_width=True)
+
+                fig_workcentre = create_workcentre_chart(df_filtered_comparison, comparison_config)
+                if fig_workcentre:
+                    st.plotly_chart(fig_workcentre, use_container_width=True)
+
+                st.markdown("---")
 
                 report_generated_comp = False
                 if export_excel_comp:
