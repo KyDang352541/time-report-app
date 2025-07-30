@@ -207,6 +207,7 @@ TEXTS = {
         'no_comparison_criteria_selected': "Please select at least one year or month for comparison.",
         'no_month_selected_for_single_year': "Please select at least one month when comparing a single project within a specific year.",
         'tab_help': "Help",
+        'preview_charts_title': "📊 Preview Charts",
         "help_instruction_simple": "If you have any questions or need support, please email to Admin **ky@triaccomposites.com**. We will respond as soon as possible. Thank you!",
         'select_all_projects_checkbox': "Select all projects"
     },
@@ -284,6 +285,7 @@ TEXTS = {
         'no_comparison_criteria_selected': "Vui lòng chọn ít nhất một năm hoặc một tháng để so sánh.",
         'no_month_selected_for_single_year': "Vui lòng chọn ít nhất một tháng khi so sánh một dự án trong một năm cụ thể.",
         'tab_help': "Trợ giúp",
+        'preview_charts_title': "📊 Biểu đồ xem trước",
         "help_instruction_simple": "Nếu bạn có bất kỳ thắc mắc nào hoặc cần hỗ trợ, vui lòng gửi email đến Quản trị viên **ky@triaccomposites.com**. Chúng tôi sẽ phản hồi trong thời gian sớm nhất. Xin cảm ơn!",
         'select_all_projects_checkbox': "Chọn tất cả dự án"
     }
@@ -522,6 +524,19 @@ with tab_standard_report_main:
             if df_filtered_standard.empty:
                 st.warning(get_text('no_data_after_filter_standard'))
             else:
+                # 👇 CHỈ THÊM PHẦN NÀY
+                st.subheader(get_text("preview_charts_title"))  # ví dụ: "📊 Biểu đồ xem trước"
+                fig_monthly = create_monthly_chart(df_filtered_standard, standard_report_config)
+                st.pyplot(fig_monthly)
+
+                fig_task = create_task_chart(df_filtered_standard, standard_report_config)
+                st.pyplot(fig_task)
+
+                fig_workcentre = create_workcentre_chart(df_filtered_standard, standard_report_config)
+                st.pyplot(fig_workcentre)
+
+                st.markdown("---")
+                
                 today_str = datetime.today().strftime("%Y-%m-%d")  # ✅ Đúng cú pháp
                 path_dict = {                                        # ✅ Bổ sung cần thiết
                 'output_file': f'outputs/standard/Time_report_Standard_{today_str}.xlsx',
