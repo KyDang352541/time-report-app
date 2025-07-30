@@ -356,20 +356,20 @@ if df_raw.empty:
     st.stop()
     
 def create_hierarchy_chart(df_filtered, config=None):
-    if not all(col in df_filtered.columns for col in ['Project Name', 'Workcentre', 'Task', 'Job', 'Hours']):
+    if not all(col in df_filtered.columns for col in ['Project name', 'Workcentre', 'Task', 'Job', 'Hours']):
         return None
 
     df_hierarchy = df_filtered.groupby(
-        ['Project Name', 'Workcentre', 'Task', 'Job']
+        ['Project name', 'Workcentre', 'Task', 'Job']
     )['Hours'].sum().reset_index()
 
     fig = px.sunburst(
         df_hierarchy,
-        path=['Project Name', 'Workcentre', 'Task', 'Job'],
+        path=['Project name', 'Workcentre', 'Task', 'Job'],
         values='Hours',
         title="🔍 Phân Cấp Project → Workcentre → Task → Job",
         template='plotly_white',
-        color='Project Name'
+        color='Project name'
     )
     fig.update_layout(margin=dict(t=40, l=10, r=10, b=10))
     return fig
@@ -1172,13 +1172,13 @@ with tab_dashboard_main:
 
     # 🔽 Phân tích phân cấp
     st.markdown("---")
-    st.subheader("🧭 Phân Tích Phân Cấp (Project → Workcentre → Task → Job)")
+    st.subheader("🧭 Hierarchical Analysis (Project → Workcentre → Task → Job)")
 
     df_hierarchy_base = df_week if not df_week.empty else df_month
 
-    if all(col in df_hierarchy_base.columns for col in ['Project Name', 'Workcentre', 'Task', 'Job', 'Hours']):
+    if all(col in df_hierarchy_base.columns for col in ['Project name', 'Workcentre', 'Task', 'Job', 'Hours']):
         fig_hierarchy = create_hierarchy_chart(df_hierarchy_base)
         if fig_hierarchy:
             st.plotly_chart(fig_hierarchy, use_container_width=True)
     else:
-        st.info("⚠️ Không đủ dữ liệu để hiển thị biểu đồ phân cấp (cần có các cột: Project Name, Workcentre, Task, Job, Hours)")
+        st.info("⚠️ Not enough data to display hierarchy chart (columns required: Project name, Workcentre, Task, Job, Hours)")
