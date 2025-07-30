@@ -371,6 +371,7 @@ tab_dashboard_main, tab_standard_report_main, tab_comparison_report_main, tab_da
     get_text('user_guide'),
     get_text("tab_help")
 ])
+# Review charts
 def create_monthly_chart(df_filtered, config):
     if 'MonthName' not in df_filtered.columns or 'Hours' not in df_filtered.columns:
         return None
@@ -380,43 +381,69 @@ def create_monthly_chart(df_filtered, config):
         'July', 'August', 'September', 'October', 'November', 'December'
     ]
 
-    monthly_hours = df_filtered.groupby('MonthName')['Hours'].sum().reindex(ordered_months).dropna()
+    df_month = (
+        df_filtered.groupby('MonthName')['Hours']
+        .sum()
+        .reindex(ordered_months)
+        .dropna()
+        .reset_index()
+    )
 
-    fig, ax = plt.subplots(figsize=(8, 4))
-    sns.barplot(x=monthly_hours.index, y=monthly_hours.values, ax=ax, palette='Blues_d')
-    ax.set_title("Monthly Total Hours")
-    ax.set_xlabel("Month")
-    ax.set_ylabel("Hours")
-    plt.xticks(rotation=45)
-    plt.tight_layout()
+    fig = px.bar(
+        df_month,
+        x='MonthName',
+        y='Hours',
+        title="📆 Monthly Total Hours",
+        color='MonthName',
+        template='plotly_white'
+    )
+    fig.update_layout(xaxis_title="Month", yaxis_title="Hours")
     return fig
 
 def create_task_chart(df_filtered, config):
     if 'Task' not in df_filtered.columns or 'Hours' not in df_filtered.columns:
         return None
 
-    task_hours = df_filtered.groupby('Task')['Hours'].sum().sort_values(ascending=False)
+    df_task = (
+        df_filtered.groupby('Task')['Hours']
+        .sum()
+        .sort_values(ascending=False)
+        .reset_index()
+    )
 
-    fig, ax = plt.subplots(figsize=(8, 4))
-    sns.barplot(x=task_hours.values, y=task_hours.index, ax=ax, palette='Greens_d')
-    ax.set_title("Total Hours by Task")
-    ax.set_xlabel("Hours")
-    ax.set_ylabel("Task")
-    plt.tight_layout()
+    fig = px.bar(
+        df_task,
+        x='Hours',
+        y='Task',
+        orientation='h',
+        title="📋 Total Hours by Task",
+        color='Task',
+        template='plotly_white'
+    )
+    fig.update_layout(xaxis_title="Hours", yaxis_title="Task")
     return fig
 
 def create_workcentre_chart(df_filtered, config):
     if 'Workcentre' not in df_filtered.columns or 'Hours' not in df_filtered.columns:
         return None
 
-    wc_hours = df_filtered.groupby('Workcentre')['Hours'].sum().sort_values(ascending=False)
+    df_wc = (
+        df_filtered.groupby('Workcentre')['Hours']
+        .sum()
+        .sort_values(ascending=False)
+        .reset_index()
+    )
 
-    fig, ax = plt.subplots(figsize=(8, 4))
-    sns.barplot(x=wc_hours.values, y=wc_hours.index, ax=ax, palette='Oranges_d')
-    ax.set_title("Total Hours by Workcentre")
-    ax.set_xlabel("Hours")
-    ax.set_ylabel("Workcentre")
-    plt.tight_layout()
+    fig = px.bar(
+        df_wc,
+        x='Hours',
+        y='Workcentre',
+        orientation='h',
+        title="🏭 Total Hours by Workcentre",
+        color='Workcentre',
+        template='plotly_white'
+    )
+    fig.update_layout(xaxis_title="Hours", yaxis_title="Workcentre")
     return fig
 # =========================================================================
 # STANDARD REPORT TAB
