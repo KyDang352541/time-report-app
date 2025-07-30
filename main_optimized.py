@@ -984,34 +984,52 @@ with tab_help_main:
     st.markdown(get_text("help_instruction_simple", lang))
     
 with tab_dashboard_main:
-    st.subheader("📊 Tổng Quan Nhanh")
+    st.subheader("📊 Quick Overview")
 
-    # 👉 Thời gian hiện tại
     today = datetime.today()
     current_year = today.year
     current_month = today.strftime('%B')
     current_week = today.isocalendar()[1]
 
-    # 👉 Chọn tuần trong tháng hiện tại
-    available_weeks = sorted(df[(df['Year'] == current_year) & (df['MonthName'] == current_month)]['Week'].unique())
-    selected_week = st.selectbox("🗓️ Chọn tuần trong tháng hiện tại", options=available_weeks, index=len(available_weeks)-1)
+    # 👉 Get start and end dates for each week number
+    def get_week_date_range(year, week_num):
+        d = datetime.strptime(f'{year}-W{week_num}-1', "%Y-W%W-%w")  # Monday of that ISO week
+        start_date = d.strftime('%d/%m')
+        end_date = (d + timedelta(days=6)).strftime('%d/%m')
+        return f"Week {week_num} ({start_date} → {end_date})"
 
-    # 👉 Lọc dữ liệu
-    df_week = df[(df['Year'] == current_year) & (df['Week'] == selected_week)]
+    # 👉 Get list of available weeks in the current month
+    available_weeks = sorted(
+        df[(df['Year'] == current_year) & (df['MonthName'] == current_month)]['Week'].unique()
+    )
+
+    # 👉 Create a label map for week numbers
+    week_labels = {w: get_week_date_range(current_year, w) for w in available_weeks}
+
+    # 👉 Week selector with formatted labels
+    selected_week_num = st.selectbox(
+        "🗓️ Select a week in the current month",
+        options=available_weeks,
+        format_func=lambda x: week_labels.get(x, f"Week {x}"),
+        index=len(available_weeks) - 1
+    )
+
+    # 👉 Filter data
+    df_week = df[(df['Year'] == current_year) & (df['Week'] == selected_week_num)]
     df_month = df[(df['Year'] == current_year) & (df['MonthName'] == current_month)]
 
-    # 👉 Tính tổng giờ
+    # 👉 Total hours
     total_hours_week = df_week['Hours'].sum()
     total_hours_month = df_month['Hours'].sum()
 
-    # 👉 Hiển thị metric
+    # 👉 Show metrics
     col1, col2 = st.columns(2)
     with col1:
-        st.metric("🗓️ Tổng giờ tuần", f"{total_hours_week:.1f}h")
+        st.metric("🗓️ Total Weekly Hours", f"{total_hours_week:.1f}h")
     with col2:
-        st.metric("📆 Tổng giờ tháng", f"{total_hours_month:.1f}h")
+        st.metric("📆 Total Monthly Hours", f"{total_hours_month:.1f}h")
 
-    # 👉 Top 5 dự án theo giờ (tuần)
+    # 👉 Top 5 projects by hours (week)
     top_projects = (
         df_week.groupby("Project name")["Hours"]
         .sum()
@@ -1021,22 +1039,22 @@ with tab_dashboard_main:
     )
     fig1 = px.bar(
         top_projects, x="Project name", y="Hours", color="Project name",
-        title="🔝 Top 5 Dự Án Theo Giờ", template="plotly_white"
+        title="🔝 Top 5 Projects by Hours", template="plotly_white"
     )
     st.plotly_chart(fig1, use_container_width=True)
 
-    # 👉 Tỉ lệ giờ theo team (pie)
+    # 👉 Hour distribution by team (pie chart)
     team_ratio = df_week.groupby("Workcentre")["Hours"].sum().reset_index()
     fig2 = px.pie(
         team_ratio, names="Workcentre", values="Hours",
-        title="🧩 Tỷ Lệ Giờ Theo Team (Workcentre)", template="plotly_white"
+        title="🧩 Hour Distribution by Team", template="plotly_white"
     )
     st.plotly_chart(fig2, use_container_width=True)
 
-    # 👉 Phân bổ team theo dự án (stacked bar)
+    # 👉 Team allocation by project (stacked bar chart)
     team_project = df_week.groupby(["Project name", "Workcentre"])["Hours"].sum().reset_index()
     fig3 = px.bar(
         team_project, x="Project name", y="Hours", color="Workcentre",
-        title="🏗️ Phân Bổ Team Theo Dự Án", template="plotly_white"
+        title="🏗️ Team Allocation by Project", template="plotly_white"
     )
     st.plotly_chart(fig3, use_container_width=True)
