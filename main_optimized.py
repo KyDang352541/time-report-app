@@ -354,6 +354,24 @@ else:
 if df_raw.empty:
     st.error(get_text('failed_to_load_raw_data'))
     st.stop()
+def create_hierarchy_chart(df_filtered, config):
+    if not all(col in df_filtered.columns for col in ['Project Name', 'Workcentre', 'Task', 'Job', 'Hours']):
+        return None
+
+    df_hierarchy = df_filtered.groupby(
+        ['Project Name', 'Workcentre', 'Task', 'Job']
+    )['Hours'].sum().reset_index()
+
+    fig = px.sunburst(
+        df_hierarchy,
+        path=['Project Name', 'Workcentre', 'Task', 'Job'],
+        values='Hours',
+        title="🔍 Tổng Quan Phân Cấp Giờ Làm",
+        template='plotly_white',
+        color='Project Name'
+    )
+    fig.update_layout(margin=dict(t=50, l=10, r=10, b=10))
+    return fig
 
 # Get unique years, months, and projects from raw data for selectbox options
 all_years = sorted(df_raw['Year'].dropna().unique().astype(int).tolist())
@@ -615,6 +633,10 @@ with tab_standard_report_main:
                 fig_workcentre = create_workcentre_chart(df_filtered_standard, standard_report_config)
                 if fig_workcentre:
                     st.plotly_chart(fig_workcentre, use_container_width=True)
+                    
+                fig_hierarchy = create_hierarchy_chart(df_filtered_comparison, comparison_config)
+                if fig_hierarchy:
+                    st.plotly_chart(fig_hierarchy, use_container_width=True)
                 st.markdown("---")
                 
                 today_str = datetime.today().strftime("%Y-%m-%d")  # ✅ Đúng cú pháp
@@ -951,7 +973,10 @@ with tab_comparison_report_main:
                 fig_workcentre = create_workcentre_chart(df_filtered_comparison, comparison_config)
                 if fig_workcentre:
                     st.plotly_chart(fig_workcentre, use_container_width=True)
-
+                    
+                fig_hierarchy = create_hierarchy_chart(df_filtered_comparison, comparison_config)
+                if fig_hierarchy:
+                    st.plotly_chart(fig_hierarchy, use_container_width=True)
                 st.markdown("---")
 
                 report_generated_comp = False
