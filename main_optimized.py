@@ -1062,14 +1062,16 @@ with tab_dashboard_main:
     )
     st.plotly_chart(fig3, use_container_width=True)
 
-def create_monthly_chart(df_filtered):
+def create_monthly_chart(df_filtered, config):
     if 'MonthName' not in df_filtered.columns or 'Hours' not in df_filtered.columns:
         return None
 
-    monthly_hours = df_filtered.groupby('MonthName')['Hours'].sum().reindex([
+    ordered_months = [
         'January', 'February', 'March', 'April', 'May', 'June',
         'July', 'August', 'September', 'October', 'November', 'December'
-    ]).dropna()
+    ]
+
+    monthly_hours = df_filtered.groupby('MonthName')['Hours'].sum().reindex(ordered_months).dropna()
 
     fig, ax = plt.subplots(figsize=(8, 4))
     sns.barplot(x=monthly_hours.index, y=monthly_hours.values, ax=ax, palette='Blues_d')
@@ -1077,5 +1079,31 @@ def create_monthly_chart(df_filtered):
     ax.set_xlabel("Month")
     ax.set_ylabel("Hours")
     plt.xticks(rotation=45)
+    plt.tight_layout()
+    return fig
+def create_task_chart(df_filtered, config):
+    if 'Task' not in df_filtered.columns or 'Hours' not in df_filtered.columns:
+        return None
+
+    task_hours = df_filtered.groupby('Task')['Hours'].sum().sort_values(ascending=False)
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+    sns.barplot(x=task_hours.values, y=task_hours.index, ax=ax, palette='Greens_d')
+    ax.set_title("Total Hours by Task")
+    ax.set_xlabel("Hours")
+    ax.set_ylabel("Task")
+    plt.tight_layout()
+    return fig
+def create_workcentre_chart(df_filtered, config):
+    if 'Workcentre' not in df_filtered.columns or 'Hours' not in df_filtered.columns:
+        return None
+
+    wc_hours = df_filtered.groupby('Workcentre')['Hours'].sum().sort_values(ascending=False)
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+    sns.barplot(x=wc_hours.values, y=wc_hours.index, ax=ax, palette='Oranges_d')
+    ax.set_title("Total Hours by Workcentre")
+    ax.set_xlabel("Hours")
+    ax.set_ylabel("Workcentre")
     plt.tight_layout()
     return fig
