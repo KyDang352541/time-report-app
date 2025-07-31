@@ -356,18 +356,18 @@ if df_raw.empty:
     st.stop()
     
 def create_hierarchy_chart(df_filtered, config=None):
-    if not all(col in df_filtered.columns for col in ['Project name', 'Workcentre', 'Task', 'Job', 'Hours']):
+    if not all(col in df_filtered.columns for col in ['Project name', 'Team', 'Workcentre', 'Task', 'Job', 'Hours']):
         return None
 
     df_hierarchy = df_filtered.groupby(
-        ['Project name', 'Workcentre', 'Task', 'Job']
+        ['Project name', 'Team', 'Workcentre', 'Task', 'Job']
     )['Hours'].sum().reset_index()
 
     fig = px.sunburst(
         df_hierarchy,
-        path=['Project name', 'Workcentre', 'Task', 'Job'],
+        path=['Project name', 'Team', 'Workcentre', 'Task', 'Job'],
         values='Hours',
-        title="🔍 Phân Cấp Project → Workcentre → Task → Job",
+        title="🔍 Phân Cấp Project → Team →  Workcentre → Task → Job",
         template='plotly_white',
         color='Project name'
     )
@@ -464,6 +464,33 @@ def create_workcentre_chart(df_filtered, config):
     )
     fig.update_layout(xaxis_title="Hours", yaxis_title="Workcentre")
     return fig
+def create_team_chart(df_filtered, config):
+    if 'Team' not in df_filtered.columns or 'Hours' not in df_filtered.columns:
+        return None
+
+    df_team = (
+        df_filtered.groupby('Team')['Hours']
+        .sum()
+        .sort_values(ascending=False)
+        .reset_index()
+    )
+
+    fig = px.bar(
+        df_team,
+        x='Hours',
+        y='Team',
+        orientation='h',
+        title="👥 Total Hours by Team",
+        color='Team',
+        template='plotly_white'
+    )
+    fig.update_layout(xaxis_title="Hours", yaxis_title="Team")
+    return fig
+
+
+
+
+
 # =========================================================================
 # STANDARD REPORT TAB
 # =========================================================================
@@ -1162,16 +1189,23 @@ with tab_dashboard_main:
         title="🏗️ Team Allocation by Project", template="plotly_white"
     )
     st.plotly_chart(fig3, use_container_width=True)
+    
+        # 👥 Biểu đồ phân tích theo Team
+    fig_team = create_team_chart(df_week, config_data)
+    if fig_team:
+        st.plotly_chart(fig_team, use_container_width=True)
+    else:
+        st.info("⚠️ Not enough data to display team chart.")
 
     # 🔽 Phân tích phân cấp
     st.markdown("---")
-    st.subheader("🧭 Hierarchical Analysis (Project → Workcentre → Task → Job)")
+    st.subheader("🧭 Hierarchical Analysis (Project → Team → Workcentre → Task → Job)")
 
     df_hierarchy_base = df_week if not df_week.empty else df_month
 
-    if all(col in df_hierarchy_base.columns for col in ['Project name', 'Workcentre', 'Task', 'Job', 'Hours']):
+    if all(col in df_hierarchy_base.columns for col in ['Project name','Team', 'Workcentre', 'Task', 'Job', 'Hours']):
         fig_hierarchy = create_hierarchy_chart(df_hierarchy_base)
         if fig_hierarchy:
             st.plotly_chart(fig_hierarchy, use_container_width=True)
     else:
-        st.info("⚠️ Not enough data to display hierarchy chart (columns required: Project name, Workcentre, Task, Job, Hours)")
+        st.info("⚠️ Not enough data to display hierarchy chart (columns required: Project name, Team, Workcentre, Task, Job, Hours)")
