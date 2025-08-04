@@ -1136,7 +1136,7 @@ with tab_dashboard_main:
         format_func=lambda x: month_name_map.get(x, f"Month {x}"),
         index=available_months.index(current_month) if current_month in available_months else 0
     )
-    current_month_name = month_name_map[selected_month]
+    current_month_name = month_name_map.get(selected_month, f"Month {selected_month}")
 
     # 📆 Lấy tuần trong tháng được chọn
     def get_week_date_range(year, week_num):
@@ -1153,7 +1153,7 @@ with tab_dashboard_main:
             if start_dt.month == selected_month:
                 label = f"Week {w} ({start_dt.strftime('%d/%m')} → {end_dt.strftime('%d/%m')})"
                 week_info.append((w, label))
-        except:
+        except Exception:
             continue
 
     week_info = sorted(week_info, key=lambda x: x[0])
@@ -1180,7 +1180,7 @@ with tab_dashboard_main:
     # 🎯 Lọc dữ liệu theo tuần hoặc cả tháng
     if selected_weeks:
         df_period = df_month[df_month['Week'].isin(selected_weeks)]
-        week_display = ", ".join([week_labels[w] for w in selected_weeks])
+        week_display = ", ".join([week_labels.get(w, f"Week {w}") for w in selected_weeks])
     else:
         df_period = df_month
         week_display = "All weeks"
@@ -1260,4 +1260,3 @@ with tab_dashboard_main:
             st.plotly_chart(fig_hierarchy, use_container_width=True)
     else:
         st.info("⚠️ Not enough data to display hierarchy chart (columns required: Project name, Team, Workcentre, Task, Job, Hours)")
-
