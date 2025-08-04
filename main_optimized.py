@@ -1160,36 +1160,18 @@ with tab_dashboard_main:
     week_labels = {w: label for w, label in week_info}
     week_options = [w for w, _ in week_info]
 
-    # Tính tuần nhiều giờ nhất
-    top_week = None
-    if not df_month.empty and 'Week' in df_month.columns:
-        week_hours = df_month.groupby("Week")["Hours"].sum()
-        top_week = week_hours.idxmax() if not week_hours.empty else None
-
-    # ⚙️ Khởi tạo session_state nếu chưa có
-    if "selected_weeks" not in st.session_state:
-        st.session_state.selected_weeks = []
-
-    # 👉 Chọn tuần thủ công
-    col_week1, col_week2 = st.columns([3, 1])
-    with col_week1:
-        selected_weeks = st.multiselect(
-            "📆 Select one or more weeks (leave empty to view full month)",
-            options=week_options,
-            format_func=lambda x: week_labels.get(x, f"Week {x}"),
-            default=st.session_state.selected_weeks,
-            key="selected_weeks"
-        )
-    with col_week2:
-        if st.button("📌 Top Week"):
-            if top_week in week_options:
-                st.session_state.selected_weeks = [top_week]
-                st.rerun()  # 👉 để cập nhật multiselect
+    # 👉 Chọn tuần
+    selected_weeks = st.multiselect(
+        "📆 Select one or more weeks (leave empty to view full month)",
+        options=week_options,
+        format_func=lambda x: week_labels.get(x, f"Week {x}"),
+        key="selected_weeks"
+    )
 
     # 🎯 Lọc dữ liệu
-    if st.session_state.selected_weeks:
-        df_period = df_month[df_month['Week'].isin(st.session_state.selected_weeks)]
-        week_display = ", ".join([week_labels.get(w, f"Week {w}") for w in st.session_state.selected_weeks])
+    if selected_weeks:
+        df_period = df_month[df_month['Week'].isin(selected_weeks)]
+        week_display = ", ".join([week_labels.get(w, f"Week {w}") for w in selected_weeks])
     else:
         df_period = df_month
         week_display = "All weeks"
