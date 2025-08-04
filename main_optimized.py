@@ -1129,8 +1129,8 @@ with tab_dashboard_main:
     today = datetime.today()
     current_year = today.year
 
-    # 🎯 Đảm bảo cột 'Month' là số nguyên (chuyển nếu là chuỗi tên tháng)
-    if df['Month'].dtype == 'O':  # kiểu object -> có thể là tên tháng
+    # 🎯 Chuyển đổi cột 'Month' nếu cần
+    if df['Month'].dtype == 'O':
         month_str_to_num = {
             month: i for i, month in enumerate(
                 [datetime(1900, m, 1).strftime('%B') for m in range(1, 13)], start=1
@@ -1138,11 +1138,11 @@ with tab_dashboard_main:
         }
         df['Month'] = df['Month'].map(month_str_to_num)
 
-    # 📅 Lấy danh sách tháng có dữ liệu trong năm hiện tại
+    # 📅 Danh sách tháng có dữ liệu
     available_months = sorted(df[df['Year'] == current_year]['Month'].dropna().unique().astype(int))
     month_name_map = {i: datetime(1900, i, 1).strftime('%B') for i in available_months}
 
-    # 📌 Tạo selectbox chọn tháng
+    # 📌 Selectbox chọn tháng
     month_options = {
         f"{month_name_map[m]} {current_year}": (current_year, m)
         for m in available_months
@@ -1152,21 +1152,20 @@ with tab_dashboard_main:
     current_year, current_month = month_options[selected_month_label]
     current_month_name = month_name_map[current_month]
 
-    # 📆 Hàm tính khoảng thời gian trong tuần
+    # 📆 Tính tuần
     def get_week_date_range(year, week_num):
         try:
-            d = datetime.strptime(f'{year}-W{int(week_num)}-1', "%Y-W%W-%w")  # Monday
+            d = datetime.strptime(f'{year}-W{int(week_num)}-1', "%Y-W%W-%w")
             start_date = d.strftime('%d/%m')
             end_date = (d + timedelta(days=6)).strftime('%d/%m')
             return f"Week {week_num} ({start_date} → {end_date})"
         except Exception:
             return f"Week {week_num}"
 
-    # 💾 Lọc dữ liệu theo tháng
     df_month = df[(df['Year'] == current_year) & (df['Month'] == current_month)]
     available_weeks = sorted(df_month['Week'].dropna().unique())
 
-    # 🗓️ Chọn tuần (tuỳ chọn)
+    # 🗓️ Tuỳ chọn tuần
     if available_weeks:
         week_labels = {w: get_week_date_range(current_year, int(w)) for w in available_weeks}
         selected_week_num = st.selectbox(
@@ -1221,7 +1220,27 @@ with tab_dashboard_main:
     )
     st.plotly_chart(fig3, use_container_width=True)
 
-    # 👥 Biểu đồ phân tích theo Team
+    # 👥 Biểu đồ phân tích theo Team & Leader (stacked bar)
+    if 'Team' in df_week.columns and 'Team leader' in df_week.columns:
+        st.subheader("👥 Total Hours by Team and Leader")
+        team_leader_hours = (
+            df_week.groupby(['Team', 'Team leader'])['Hours']
+            .sum()
+            .reset_index()
+        )
+        fig_team_stacked = px.bar(
+            team_leader_hours,
+            x="Team",
+            y="Hours",
+            color="Team leader",
+            title="👥 Total Hours by Team and Leader",
+            template=template_name
+        )
+        st.plotly_chart(fig_team_stacked, use_container_width=True)
+    else:
+        st.info("⚠️ Not enough data to display team-leader chart.")
+
+    # 👥 Biểu đồ tổng hợp theo Team cũ (nếu muốn giữ lại)
     fig_team = create_team_chart(df_week, config_data)
     if fig_team:
         st.plotly_chart(fig_team, use_container_width=True)
