@@ -1166,33 +1166,35 @@ with tab_dashboard_main:
         week_hours = df_month.groupby("Week")["Hours"].sum()
         top_week = week_hours.idxmax() if not week_hours.empty else None
 
+    # ⚙️ Khởi tạo session_state nếu chưa có
+    if "selected_weeks" not in st.session_state:
+        st.session_state.selected_weeks = []
+
     # 👉 Chọn tuần thủ công
     col_week1, col_week2 = st.columns([3, 1])
     with col_week1:
-        selected_weeks_raw = st.multiselect(
+        selected_weeks = st.multiselect(
             "📆 Select one or more weeks (leave empty to view full month)",
             options=week_options,
-            format_func=lambda x: week_labels.get(x, f"Week {x}")
+            format_func=lambda x: week_labels.get(x, f"Week {x}"),
+            default=st.session_state.selected_weeks,
+            key="selected_weeks"
         )
     with col_week2:
-        use_top_week = st.button("📌 Top Week")
-
-    # ✅ Xử lý chọn tuần
-    if use_top_week and top_week:
-        selected_weeks = [top_week]
-    else:
-        selected_weeks = selected_weeks_raw
+        if st.button("📌 Top Week"):
+            if top_week in week_options:
+                st.session_state.selected_weeks = [top_week]
+                st.rerun()  # 👉 để cập nhật multiselect
 
     # 🎯 Lọc dữ liệu
-    if selected_weeks:
-        df_period = df_month[df_month['Week'].isin(selected_weeks)]
-        week_display = ", ".join([week_labels.get(w, f"Week {w}") for w in selected_weeks])
+    if st.session_state.selected_weeks:
+        df_period = df_month[df_month['Week'].isin(st.session_state.selected_weeks)]
+        week_display = ", ".join([week_labels.get(w, f"Week {w}") for w in st.session_state.selected_weeks])
     else:
         df_period = df_month
         week_display = "All weeks"
 
     total_hours = df_period['Hours'].sum()
-
     st.markdown(f"📆 Showing data for **{current_month_name} {current_year}**, {week_display}")
     st.metric("⏱️ Total Hours", f"{total_hours:.1f}h")
 
@@ -1266,4 +1268,3 @@ with tab_dashboard_main:
             st.plotly_chart(fig_hierarchy, use_container_width=True)
     else:
         st.info("⚠️ Not enough data to display hierarchy chart (columns required: Project name, Team, Workcentre, Task, Job, Hours)")
-
