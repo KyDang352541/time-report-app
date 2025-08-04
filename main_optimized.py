@@ -1130,12 +1130,19 @@ with tab_dashboard_main:
     # 📅 Chọn tháng trong năm hiện tại
     available_months = sorted(df[df['Year'] == current_year]['Month'].unique())
     month_name_map = {i: datetime(1900, i, 1).strftime('%B') for i in range(1, 13)}
+    month_number_map = {v: k for k, v in month_name_map.items()}  # Reverse
+
     selected_month = st.selectbox(
         "🗓️ Select a month in current year",
         options=available_months,
         format_func=lambda x: month_name_map.get(x, f"Month {x}"),
         index=current_month - 1 if current_month in available_months else 0
     )
+
+    # Đảm bảo selected_month là số (trong trường hợp Streamlit đổi kiểu)
+    if isinstance(selected_month, str):
+        selected_month = month_number_map.get(selected_month, current_month)
+
     current_month_name = month_name_map[selected_month]
 
     # 📅 Chọn tuần trong năm hiện tại
