@@ -1129,9 +1129,20 @@ with tab_dashboard_main:
     today = datetime.today()
     current_year = today.year
 
-    # 📅 Cho phép chọn tất cả các tháng trong năm hiện tại
-    available_months = sorted(df[df['Year'] == current_year]['Month'].unique())
-    month_name_map = {i: datetime(1900, i, 1).strftime('%B') for i in range(1, 13)}
+    # 🎯 Đảm bảo cột 'Month' là số nguyên (chuyển nếu là chuỗi tên tháng)
+    if df['Month'].dtype == 'O':  # kiểu object -> có thể là tên tháng
+        month_str_to_num = {
+            month: i for i, month in enumerate(
+                [datetime(1900, m, 1).strftime('%B') for m in range(1, 13)], start=1
+            )
+        }
+        df['Month'] = df['Month'].map(month_str_to_num)
+
+    # 📅 Lấy danh sách tháng có dữ liệu trong năm hiện tại
+    available_months = sorted(df[df['Year'] == current_year]['Month'].dropna().unique().astype(int))
+    month_name_map = {i: datetime(1900, i, 1).strftime('%B') for i in available_months}
+
+    # 📌 Tạo selectbox chọn tháng
     month_options = {
         f"{month_name_map[m]} {current_year}": (current_year, m)
         for m in available_months
@@ -1160,7 +1171,7 @@ with tab_dashboard_main:
         week_labels = {w: get_week_date_range(current_year, int(w)) for w in available_weeks}
         selected_week_num = st.selectbox(
             "🗓️ Select a week in the selected month (optional)",
-            options=[None] + available_weeks,
+            options=[None] + list(available_weeks),
             format_func=lambda x: week_labels.get(x, f"Week {x}") if x is not None else "📅 All Weeks in Month",
             index=0
         )
