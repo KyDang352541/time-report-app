@@ -1130,30 +1130,42 @@ with tab_dashboard_main:
 
     today = datetime.today()
     current_year = today.year
-    current_month = today.strftime('%B')
+    current_month = today.month
     current_week = today.isocalendar()[1]
 
+    # 📅 Chọn tháng trong năm hiện tại
+    available_months = sorted(df[df['Year'] == current_year]['Month'].unique())
+    month_name_map = {i: datetime(1900, i, 1).strftime('%B') for i in range(1, 13)}
+    selected_month = st.selectbox(
+        "🗓️ Select a month in current year",
+        options=available_months,
+        format_func=lambda x: month_name_map.get(x, f"Month {x}"),
+        index=current_month - 1 if current_month in available_months else 0
+    )
+    current_month_name = month_name_map[selected_month]
+
+    # 📅 Chọn tuần trong năm hiện tại
     def get_week_date_range(year, week_num):
-        d = datetime.strptime(f'{year}-W{week_num}-1', "%Y-W%W-%w")  # Monday
+        d = datetime.strptime(f'{year}-W{int(week_num)}-1', "%Y-W%W-%w")  # Monday
         start_date = d.strftime('%d/%m')
         end_date = (d + timedelta(days=6)).strftime('%d/%m')
         return f"Week {week_num} ({start_date} → {end_date})"
 
-    available_weeks = sorted(
-        df[(df['Year'] == current_year) & (df['MonthName'] == current_month)]['Week'].unique()
-    )
+    available_weeks = sorted(df[df['Year'] == current_year]['Week'].unique())
     week_labels = {w: get_week_date_range(current_year, w) for w in available_weeks}
 
-    selected_week_num = st.selectbox(
-        "🗓️ Select a week in the current month",
+    selected_week = st.selectbox(
+        "📆 Select a week in current year",
         options=available_weeks,
         format_func=lambda x: week_labels.get(x, f"Week {x}"),
-        index=len(available_weeks) - 1
+        index=available_weeks.index(current_week) if current_week in available_weeks else 0
     )
 
-    df_week = df[(df['Year'] == current_year) & (df['Week'] == selected_week_num)]
-    df_month = df[(df['Year'] == current_year) & (df['MonthName'] == current_month)]
+    # 🎯 Lọc dữ liệu
+    df_week = df[(df['Year'] == current_year) & (df['Week'] == selected_week)]
+    df_month = df[(df['Year'] == current_year) & (df['Month'] == selected_month)]
 
+    # 📊 Tổng giờ
     total_hours_week = df_week['Hours'].sum()
     total_hours_month = df_month['Hours'].sum()
 
@@ -1163,6 +1175,7 @@ with tab_dashboard_main:
     with col2:
         st.metric("📆 Total Monthly Hours", f"{total_hours_month:.1f}h")
 
+    # 🔝 Top 5 Projects
     top_projects = (
         df_week.groupby("Project name")["Hours"]
         .sum()
@@ -1176,34 +1189,57 @@ with tab_dashboard_main:
     )
     st.plotly_chart(fig1, use_container_width=True)
 
-    team_ratio = df_week.groupby("Workcentre")["Hours"].sum().reset_index()
+    # 🧩 Hour Distribution by Team (có thêm Team leader)
+    team_ratio = (
+        df_week.groupby(["Workcentre", "Team leader"])["Hours"]
+        .sum()
+        .reset_index()
+    )
     fig2 = px.pie(
         team_ratio, names="Workcentre", values="Hours",
+        hover_data=["Team leader"],
         title="🧩 Hour Distribution by Team", template="plotly_white"
     )
     st.plotly_chart(fig2, use_container_width=True)
 
-    team_project = df_week.groupby(["Project name", "Workcentre"])["Hours"].sum().reset_index()
+    # 🏗️ Team Allocation by Project (có thêm Team leader)
+    team_project = (
+        df_week.groupby(["Project name", "Workcentre", "Team leader"])["Hours"]
+        .sum()
+        .reset_index()
+    )
     fig3 = px.bar(
         team_project, x="Project name", y="Hours", color="Workcentre",
+        hover_data=["Team leader"],
         title="🏗️ Team Allocation by Project", template="plotly_white"
     )
     st.plotly_chart(fig3, use_container_width=True)
-    
-        # 👥 Biểu đồ phân tích theo Team
+
+    # 👥 Biểu đồ phân tích theo Team
     fig_team = create_team_chart(df_week, config_data)
     if fig_team:
         st.plotly_chart(fig_team, use_container_width=True)
     else:
         st.info("⚠️ Not enough data to display team chart.")
 
-    # 🔽 Phân tích phân cấp
+    # 📋 Bảng tổng hợp Team leader
+    st.markdown("### 👤 Team Leader Summary")
+    team_leader_summary = (
+        df_week.groupby(["Team", "Team leader"])["Hours"]
+        .sum()
+        .reset_index()
+        .sort_values(by="Hours", ascending=False)
+    )
+    st.dataframe(team_leader_summary, use_container_width=True)
+
+    # 🧭 Phân tích phân cấp
     st.markdown("---")
     st.subheader("🧭 Hierarchical Analysis (Project → Team → Workcentre → Task → Job)")
 
     df_hierarchy_base = df_week if not df_week.empty else df_month
+    required_columns = ['Project name', 'Team', 'Workcentre', 'Task', 'Job', 'Hours']
 
-    if all(col in df_hierarchy_base.columns for col in ['Project name','Team', 'Workcentre', 'Task', 'Job', 'Hours']):
+    if all(col in df_hierarchy_base.columns for col in required_columns):
         fig_hierarchy = create_hierarchy_chart(df_hierarchy_base)
         if fig_hierarchy:
             st.plotly_chart(fig_hierarchy, use_container_width=True)
