@@ -355,23 +355,22 @@ if df_raw.empty:
     st.error(get_text('failed_to_load_raw_data'))
     st.stop()
     
-def create_hierarchy_chart(df_filtered, config=None):
-    if not all(col in df_filtered.columns for col in ['Project name', 'Team', 'Workcentre', 'Task', 'Job', 'Hours']):
+def create_hierarchy_chart(df):
+    required_cols = ['Project name', 'Team', 'Workcentre', 'Task', 'Job', 'Hours']
+    if df.empty or not all(col in df.columns for col in required_cols):
         return None
 
-    df_hierarchy = df_filtered.groupby(
-        ['Project name', 'Team', 'Workcentre', 'Task', 'Job']
-    )['Hours'].sum().reset_index()
+    if 'Team leader' not in df.columns:
+        df['Team leader'] = 'Unknown'
 
     fig = px.sunburst(
-        df_hierarchy,
+        df,
         path=['Project name', 'Team', 'Workcentre', 'Task', 'Job'],
         values='Hours',
-        title="🔍 Phân Cấp Project → Team →  Workcentre → Task → Job",
-        template='plotly_white',
-        color='Project name'
+        hover_data=['Team leader'],
+        title='📌 Project → Team → Workcentre → Task → Job',
+        template='plotly_white'
     )
-    fig.update_layout(margin=dict(t=40, l=10, r=10, b=10))
     return fig
 
 # Get unique years, months, and projects from raw data for selectbox options
@@ -464,32 +463,27 @@ def create_workcentre_chart(df_filtered, config):
     )
     fig.update_layout(xaxis_title="Hours", yaxis_title="Workcentre")
     return fig
-def create_team_chart(df_filtered, config):
-    if 'Team' not in df_filtered.columns or 'Hours' not in df_filtered.columns:
+def create_team_chart(df, config_data=None):
+    if df.empty or not all(col in df.columns for col in ['Team', 'Team leader', 'Hours']):
         return None
 
-    df_team = (
-        df_filtered.groupby('Team')['Hours']
+    team_summary = (
+        df.groupby(['Team', 'Team leader'])['Hours']
         .sum()
-        .sort_values(ascending=False)
         .reset_index()
+        .sort_values(by='Hours', ascending=False)
     )
 
     fig = px.bar(
-        df_team,
-        x='Hours',
-        y='Team',
-        orientation='h',
-        title="👥 Total Hours by Team",
+        team_summary,
+        x='Team',
+        y='Hours',
         color='Team',
+        hover_data=['Team leader'],
+        title='👥 Total Hours by Team and Leader',
         template='plotly_white'
     )
-    fig.update_layout(xaxis_title="Hours", yaxis_title="Team")
     return fig
-
-
-
-
 
 # =========================================================================
 # STANDARD REPORT TAB
