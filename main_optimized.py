@@ -1122,6 +1122,7 @@ with tab_help_main:
     st.markdown(get_text("help_instruction_simple", lang))
 
 with tab_dashboard_main:
+    import plotly.io as pio
     template_name = "plotly_white" if "plotly_white" in pio.templates else None
     st.subheader("📊 Quick Overview")
 
@@ -1132,12 +1133,13 @@ with tab_dashboard_main:
     available_months = sorted(df[df['Year'] == current_year]['Month'].unique())
     month_name_map = {i: datetime(1900, i, 1).strftime('%B') for i in range(1, 13)}
     month_options = {
-        f"{month_name_map[m]} {current_year}": (current_year, month_name_map[m])
+        f"{month_name_map[m]} {current_year}": (current_year, m)
         for m in available_months
     }
 
     selected_month_label = st.selectbox("📅 Select month", list(month_options.keys()), index=0)
     current_year, current_month = month_options[selected_month_label]
+    current_month_name = month_name_map[current_month]
 
     # 📆 Hàm tính khoảng thời gian trong tuần
     def get_week_date_range(year, week_num):
@@ -1150,7 +1152,7 @@ with tab_dashboard_main:
             return f"Week {week_num}"
 
     # 💾 Lọc dữ liệu theo tháng
-    df_month = df[(df['Year'] == current_year) & (df['MonthName'] == current_month)]
+    df_month = df[(df['Year'] == current_year) & (df['Month'] == current_month)]
     available_weeks = sorted(df_month['Week'].dropna().unique())
 
     # 🗓️ Chọn tuần (tuỳ chọn)
@@ -1162,7 +1164,6 @@ with tab_dashboard_main:
             format_func=lambda x: week_labels.get(x, f"Week {x}") if x is not None else "📅 All Weeks in Month",
             index=0
         )
-
         df_week = df_month if selected_week_num is None else df_month[df_month['Week'] == selected_week_num]
     else:
         st.warning("⚠️ No weekly data found for selected month.")
