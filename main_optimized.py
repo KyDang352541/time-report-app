@@ -358,21 +358,28 @@ if df_raw.empty:
     st.stop()
     
 def create_hierarchy_chart(df):
-    required_cols = ['Project name', 'Team', 'Workcentre', 'Task', 'Job', 'Hours']
+    required_cols = ['Project name', 'Team', 'Workcentre', 'Task', 'Job', 'Employee', 'Hours']
     if df.empty or not all(col in df.columns for col in required_cols):
         return None
 
+    # Thêm cột Team leader nếu thiếu
     if 'Team leader' not in df.columns:
         df['Team leader'] = 'Unknown'
 
+    # Thêm cột Employee nếu thiếu (cẩn thận nếu dùng trước đó)
+    df['Employee'] = df['Employee'].fillna("Unknown")
+
     fig = px.sunburst(
         df,
-        path=['Project name', 'Team', 'Workcentre', 'Task', 'Job'],
+        path=['Project name', 'Team', 'Workcentre', 'Task', 'Job', 'Employee'],
         values='Hours',
-        hover_data=['Team leader'],
-        title='📌 Project → Team → Workcentre → Task → Job',
+        hover_data=['Team leader', 'Employee'],
+        title='📌 Project → Team → Workcentre → Task → Job → Employee',
         template='plotly_white'
     )
+
+    fig.update_traces(insidetextorientation='radial')
+    fig.update_layout(margin=dict(t=30, l=0, r=0, b=0))
     return fig
 
 # Get unique years, months, and projects from raw data for selectbox options
@@ -1284,14 +1291,16 @@ with tab_dashboard_main:
 
     # 🔽 Phân tích phân cấp
     st.markdown("---")
-    st.subheader("🧭 Hierarchical Analysis (Project → Team → Workcentre → Task → Job)")
+    st.subheader("🧭 Hierarchical Analysis (Project → Team → Workcentre → Task → Job → Employee)")
 
     df_hierarchy_base = df_week if not df_week.empty else df_month
-    required_cols = ['Project name', 'Team', 'Workcentre', 'Task', 'Job', 'Hours']
+    required_cols = ['Project name', 'Team', 'Workcentre', 'Task', 'Job', 'Employee', 'Hours']
 
     if all(col in df_hierarchy_base.columns for col in required_cols):
         fig_hierarchy = create_hierarchy_chart(df_hierarchy_base)
         if fig_hierarchy:
             st.plotly_chart(fig_hierarchy, use_container_width=True)
+        else:
+            st.info("⚠️ Not enough data to generate the hierarchy chart.")
     else:
-        st.info("⚠️ Not enough data to display hierarchy chart (columns required: Project name, Team, Workcentre, Task, Job, Hours)")
+        st.info("⚠️ Not enough data to display hierarchy chart (columns required: Project name, Team, Workcentre, Task, Job, Employee, Hours)")
