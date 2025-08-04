@@ -1177,6 +1177,7 @@ with tab_dashboard_main:
         week_display = "All weeks"
 
     total_hours = df_period['Hours'].sum()
+
     st.markdown(f"📆 Showing data for **{current_month_name} {current_year}**, {week_display}")
     st.metric("⏱️ Total Hours", f"{total_hours:.1f}h")
 
