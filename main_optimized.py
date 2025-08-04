@@ -1126,7 +1126,7 @@ with tab_dashboard_main:
     current_year = today.year
     current_month = today.month
 
-    # 📅 Chọn tháng trong năm hiện tại (trả về số tháng, không gây lỗi)
+    # 📅 Chọn tháng trong năm hiện tại
     available_months = sorted(df[df['Year'] == current_year]['Month'].unique())
     month_name_map = {i: datetime(1900, i, 1).strftime('%B') for i in range(1, 13)}
 
@@ -1138,7 +1138,7 @@ with tab_dashboard_main:
     )
     current_month_name = month_name_map.get(selected_month, f"Month {selected_month}")
 
-    # 📆 Lấy tuần trong tháng được chọn
+    # 📆 Tính toán danh sách tuần hợp lệ trong tháng được chọn
     def get_week_date_range(year, week_num):
         d = datetime.strptime(f'{year}-W{int(week_num)}-1', "%Y-W%W-%w")
         return d, d + timedelta(days=6)
@@ -1150,6 +1150,7 @@ with tab_dashboard_main:
     for w in all_weeks:
         try:
             start_dt, end_dt = get_week_date_range(current_year, w)
+            # Đảm bảo tuần bắt đầu trong tháng được chọn
             if start_dt.month == selected_month:
                 label = f"Week {w} ({start_dt.strftime('%d/%m')} → {end_dt.strftime('%d/%m')})"
                 week_info.append((w, label))
@@ -1158,6 +1159,7 @@ with tab_dashboard_main:
 
     week_info = sorted(week_info, key=lambda x: x[0])
     week_labels = {w: label for w, label in week_info}
+    week_options = [w for w, _ in week_info]
 
     # Tìm tuần có nhiều giờ nhất
     top_week = None
@@ -1165,16 +1167,21 @@ with tab_dashboard_main:
         week_hours = df_month.groupby("Week")["Hours"].sum()
         top_week = week_hours.idxmax() if not week_hours.empty else None
 
+    # 📆 Chọn nhiều tuần
+    selected_weeks_holder = st.session_state.get("selected_weeks", [])
     col_week1, col_week2 = st.columns([3, 1])
     with col_week1:
         selected_weeks = st.multiselect(
             "📆 Select one or more weeks (leave empty to view full month)",
-            options=[w for w, _ in week_info],
-            format_func=lambda x: week_labels.get(x, f"Week {x}")
+            options=week_options,
+            default=selected_weeks_holder,
+            format_func=lambda x: week_labels.get(x, f"Week {x}"),
+            key="selected_weeks"
         )
     with col_week2:
         if st.button("📌 Top Week"):
             if top_week in week_labels:
+                st.session_state.selected_weeks = [top_week]
                 selected_weeks = [top_week]
 
     # 🎯 Lọc dữ liệu theo tuần hoặc cả tháng
@@ -1186,7 +1193,6 @@ with tab_dashboard_main:
         week_display = "All weeks"
 
     total_hours = df_period['Hours'].sum()
-
     st.markdown(f"📆 Showing data for **{current_month_name} {current_year}**, {week_display}")
     st.metric("⏱️ Total Hours", f"{total_hours:.1f}h")
 
@@ -1260,3 +1266,4 @@ with tab_dashboard_main:
             st.plotly_chart(fig_hierarchy, use_container_width=True)
     else:
         st.info("⚠️ Not enough data to display hierarchy chart (columns required: Project name, Team, Workcentre, Task, Job, Hours)")
+
