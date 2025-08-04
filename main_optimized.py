@@ -1220,32 +1220,30 @@ with tab_dashboard_main:
     )
     st.plotly_chart(fig3, use_container_width=True)
 
-    # 👥 Biểu đồ phân tích theo Team & Leader (stacked bar)
-    if 'Team' in df_week.columns and 'Team leader' in df_week.columns:
-        st.subheader("👥 Total Hours by Team and Leader")
-        team_leader_hours = (
-            df_week.groupby(['Team', 'Team leader'])['Hours']
+    # 👥 Biểu đồ Team + Leader + Employee (stacked)
+    if all(col in df_week.columns for col in ['Team', 'Team leader', 'Employee']):
+        st.subheader("👥 Total Hours by Team, Leader and Employee")
+
+        df_team_emp = (
+            df_week.groupby(['Team', 'Team leader', 'Employee'])['Hours']
             .sum()
             .reset_index()
         )
-        fig_team_stacked = px.bar(
-            team_leader_hours,
+
+        fig_team_emp = px.bar(
+            df_team_emp,
             x="Team",
             y="Hours",
-            color="Team leader",
-            title="👥 Total Hours by Team and Leader",
+            color="Employee",
+            hover_data=["Team leader"],
+            title="👥 Total Hours by Team and Employee",
             template=template_name
         )
-        st.plotly_chart(fig_team_stacked, use_container_width=True)
-    else:
-        st.info("⚠️ Not enough data to display team-leader chart.")
 
-    # 👥 Biểu đồ tổng hợp theo Team cũ (nếu muốn giữ lại)
-    fig_team = create_team_chart(df_week, config_data)
-    if fig_team:
-        st.plotly_chart(fig_team, use_container_width=True)
+        fig_team_emp.update_layout(barmode='stack', xaxis_title="Team", yaxis_title="Total Hours")
+        st.plotly_chart(fig_team_emp, use_container_width=True)
     else:
-        st.info("⚠️ Not enough data to display team chart.")
+        st.info("⚠️ Not enough data to display team + employee breakdown.")
 
     # 🔽 Phân tích phân cấp
     st.markdown("---")
