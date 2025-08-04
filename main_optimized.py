@@ -1125,12 +1125,10 @@ with tab_dashboard_main:
     today = datetime.today()
     current_year = today.year
     current_month = today.month
-    current_week = today.isocalendar()[1]
 
     # 📅 Chọn tháng trong năm hiện tại
     available_months = sorted(df[df['Year'] == current_year]['Month'].unique())
     month_name_map = {i: datetime(1900, i, 1).strftime('%B') for i in range(1, 13)}
-    month_number_map = {v: k for k, v in month_name_map.items()}
 
     selected_month = st.selectbox(
         "🗓️ Select a month in current year",
@@ -1138,43 +1136,59 @@ with tab_dashboard_main:
         format_func=lambda x: month_name_map.get(x, f"Month {x}"),
         index=current_month - 1 if current_month in available_months else 0
     )
-    if isinstance(selected_month, str):
-        selected_month = month_number_map.get(selected_month, current_month)
-
     current_month_name = month_name_map[selected_month]
 
-    # 📅 Tuần thuộc tháng đã chọn (tuỳ chọn)
+    # 📆 Chọn tuần trong tháng đã chọn
     def get_week_date_range(year, week_num):
         d = datetime.strptime(f'{year}-W{int(week_num)}-1', "%Y-W%W-%w")
-        start_date = d.strftime('%d/%m')
-        end_date = (d + timedelta(days=6)).strftime('%d/%m')
-        return f"Week {week_num} ({start_date} → {end_date})"
+        return d, d + timedelta(days=6)
 
-    available_weeks = sorted(
-        df[(df['Year'] == current_year) & (df['Month'] == selected_month)]['Week'].unique()
-    )
-    week_labels = {w: get_week_date_range(current_year, w) for w in available_weeks}
+    # Tìm các tuần có ngày bắt đầu nằm trong tháng đã chọn
+    df_month = df[(df['Year'] == current_year) & (df['Month'] == selected_month)]
+    all_weeks = df_month['Week'].unique()
 
-    selected_week = st.selectbox(
-        "📆 Select a week (optional, leave empty to view the full month)",
-        options=[None] + available_weeks,
-        format_func=lambda x: week_labels.get(x, "📅 All weeks in month") if x else "📅 All weeks in month",
-        index=0
-    )
+    week_info = []
+    for w in all_weeks:
+        try:
+            start_dt, end_dt = get_week_date_range(current_year, w)
+            if start_dt.month == selected_month:
+                label = f"Week {w} ({start_dt.strftime('%d/%m')} → {end_dt.strftime('%d/%m')})"
+                week_info.append((w, label))
+        except:
+            continue
 
-    # 🎯 Lọc dữ liệu
-    if selected_week is None:
-        df_period = df[(df['Year'] == current_year) & (df['Month'] == selected_month)]
+    week_info = sorted(week_info, key=lambda x: x[0])
+    week_labels = {w[0]: w[1] for w in week_info}
+
+    # ⏫ Chọn tuần có nhiều giờ nhất
+    top_week = None
+    if not df_month.empty and 'Week' in df_month.columns:
+        week_hours = df_month.groupby("Week")["Hours"].sum()
+        top_week = week_hours.idxmax() if not week_hours.empty else None
+
+    col_week1, col_week2 = st.columns([3, 1])
+    with col_week1:
+        selected_weeks = st.multiselect(
+            "📆 Select one or more weeks (leave empty to view full month)",
+            options=[w[0] for w in week_info],
+            format_func=lambda x: week_labels.get(x, f"Week {x}"),
+        )
+    with col_week2:
+        if st.button("📌 Top Week"):
+            if top_week in week_labels:
+                selected_weeks = [top_week]
+
+    # 🎯 Lọc dữ liệu theo tháng và tuần
+    if selected_weeks:
+        df_period = df_month[df_month['Week'].isin(selected_weeks)]
     else:
-        df_period = df[(df['Year'] == current_year) &
-                       (df['Week'] == selected_week) &
-                       (df['Month'] == selected_month)]
+        df_period = df_month
 
     # 📊 Tổng giờ
     total_hours = df_period['Hours'].sum()
-    st.markdown(f"📆 Showing data for **{current_month_name} {current_year}**"
-                + (f", Week {selected_week}" if selected_week else ", All weeks"))
+    week_display = ", ".join([week_labels[w] for w in selected_weeks]) if selected_weeks else "All weeks"
 
+    st.markdown(f"📆 Showing data for **{current_month_name} {current_year}**, {week_display}")
     st.metric("⏱️ Total Hours", f"{total_hours:.1f}h")
 
     # 🔝 Top 5 Projects
