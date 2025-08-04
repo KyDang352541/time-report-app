@@ -358,29 +358,36 @@ if df_raw.empty:
     st.stop()
     
 def create_hierarchy_chart(df):
-    required_cols = ['Project name', 'Team', 'Workcentre', 'Task', 'Job', 'Employee', 'Hours']
+    path_levels = ['Project name', 'Team', 'Workcentre', 'Task', 'Job', 'Employee']
+    required_cols = path_levels + ['Hours']
+
     if df.empty or not all(col in df.columns for col in required_cols):
         return None
 
-    # Thêm cột Team leader nếu thiếu
     if 'Team leader' not in df.columns:
         df['Team leader'] = 'Unknown'
 
-    # Thêm cột Employee nếu thiếu (cẩn thận nếu dùng trước đó)
-    df['Employee'] = df['Employee'].fillna("Unknown")
+    if len(path_levels) > 5:
+        fig = px.treemap(
+            df,
+            path=path_levels,
+            values='Hours',
+            hover_data=['Team leader'],
+            title='📌 Hierarchical View (Project → ... → Employee)',
+            template='plotly_white'
+        )
+    else:
+        fig = px.sunburst(
+            df,
+            path=path_levels,
+            values='Hours',
+            hover_data=['Team leader'],
+            title='📌 Hierarchical View (Project → ... → Employee)',
+            template='plotly_white'
+        )
 
-    fig = px.sunburst(
-        df,
-        path=['Project name', 'Team', 'Workcentre', 'Task', 'Job', 'Employee'],
-        values='Hours',
-        hover_data=['Team leader', 'Employee'],
-        title='📌 Project → Team → Workcentre → Task → Job → Employee',
-        template='plotly_white'
-    )
-
-    fig.update_traces(insidetextorientation='radial')
-    fig.update_layout(margin=dict(t=30, l=0, r=0, b=0))
     return fig
+
 
 # Get unique years, months, and projects from raw data for selectbox options
 all_years = sorted(df_raw['Year'].dropna().unique().astype(int).tolist())
