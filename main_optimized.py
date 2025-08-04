@@ -1120,61 +1120,62 @@ with tab_help_main:
 
     st.markdown(f"### {get_text('tab_help', lang)}")
     st.markdown(get_text("help_instruction_simple", lang))
-    
+
 with tab_dashboard_main:
     template_name = "plotly_white" if "plotly_white" in pio.templates else None
     st.subheader("📊 Quick Overview")
 
     today = datetime.today()
-    first_day_this_month = today.replace(day=1)
-    first_day_last_month = (first_day_this_month - timedelta(days=1)).replace(day=1)
+    current_year = today.year
 
-    # 📌 Cho người dùng chọn giữa tháng này và tháng trước
+    # 📅 Cho phép chọn tất cả các tháng trong năm hiện tại
+    available_months = sorted(df[df['Year'] == current_year]['Month'].unique())
+    month_name_map = {i: datetime(1900, i, 1).strftime('%B') for i in range(1, 13)}
     month_options = {
-        f"{first_day_this_month.strftime('%B %Y')}": (first_day_this_month.year, first_day_this_month.strftime('%B')),
-        f"{first_day_last_month.strftime('%B %Y')}": (first_day_last_month.year, first_day_last_month.strftime('%B'))
+        f"{month_name_map[m]} {current_year}": (current_year, month_name_map[m])
+        for m in available_months
     }
 
     selected_month_label = st.selectbox("📅 Select month", list(month_options.keys()), index=0)
     current_year, current_month = month_options[selected_month_label]
 
-    current_week = today.isocalendar()[1]
-
+    # 📆 Hàm tính khoảng thời gian trong tuần
     def get_week_date_range(year, week_num):
         try:
-            d = datetime.strptime(f'{year}-W{week_num}-1', "%Y-W%W-%w")  # Monday
+            d = datetime.strptime(f'{year}-W{int(week_num)}-1', "%Y-W%W-%w")  # Monday
             start_date = d.strftime('%d/%m')
             end_date = (d + timedelta(days=6)).strftime('%d/%m')
             return f"Week {week_num} ({start_date} → {end_date})"
         except Exception:
             return f"Week {week_num}"
 
-    # 💾 Lọc dữ liệu tháng
+    # 💾 Lọc dữ liệu theo tháng
     df_month = df[(df['Year'] == current_year) & (df['MonthName'] == current_month)]
     available_weeks = sorted(df_month['Week'].dropna().unique())
 
+    # 🗓️ Chọn tuần (tuỳ chọn)
     if available_weeks:
         week_labels = {w: get_week_date_range(current_year, int(w)) for w in available_weeks}
-
         selected_week_num = st.selectbox(
-            "🗓️ Select a week in the current month",
-            options=available_weeks,
-            format_func=lambda x: week_labels.get(x, f"Week {x}"),
-            index=len(available_weeks) - 1
+            "🗓️ Select a week in the selected month (optional)",
+            options=[None] + available_weeks,
+            format_func=lambda x: week_labels.get(x, f"Week {x}") if x is not None else "📅 All Weeks in Month",
+            index=0
         )
 
-        df_week = df_month[df_month['Week'] == selected_week_num]
+        df_week = df_month if selected_week_num is None else df_month[df_month['Week'] == selected_week_num]
     else:
         st.warning("⚠️ No weekly data found for selected month.")
         df_week = df_month
         selected_week_num = None
 
+    # 📊 Tổng giờ
     total_hours_week = df_week['Hours'].sum()
     total_hours_month = df_month['Hours'].sum()
 
     col1, col2 = st.columns(2)
     with col1:
-        st.metric("🗓️ Total Weekly Hours", f"{total_hours_week:.1f}h")
+        st.metric("🗓️ Total Selected Hours", f"{total_hours_week:.1f}h")
     with col2:
         st.metric("📆 Total Monthly Hours", f"{total_hours_month:.1f}h")
 
@@ -1220,8 +1221,9 @@ with tab_dashboard_main:
     st.subheader("🧭 Hierarchical Analysis (Project → Team → Workcentre → Task → Job)")
 
     df_hierarchy_base = df_week if not df_week.empty else df_month
+    required_cols = ['Project name', 'Team', 'Workcentre', 'Task', 'Job', 'Hours']
 
-    if all(col in df_hierarchy_base.columns for col in ['Project name', 'Team', 'Workcentre', 'Task', 'Job', 'Hours']):
+    if all(col in df_hierarchy_base.columns for col in required_cols):
         fig_hierarchy = create_hierarchy_chart(df_hierarchy_base)
         if fig_hierarchy:
             st.plotly_chart(fig_hierarchy, use_container_width=True)
