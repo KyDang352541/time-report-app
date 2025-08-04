@@ -1204,21 +1204,58 @@ with tab_dashboard_main:
     )
     st.plotly_chart(fig1, use_container_width=True)
 
-    # 🧩 Hour Distribution by Team
-    team_ratio = df_week.groupby("Workcentre")["Hours"].sum().reset_index()
-    fig2 = px.pie(
-        team_ratio, names="Workcentre", values="Hours",
-        title="🧩 Hour Distribution by Team", template=template_name
-    )
+    # 🧩 Hour Distribution by Team (with Team leader)
+    if all(col in df_week.columns for col in ["Workcentre", "Team leader"]):
+        team_leader_ratio = (
+            df_week.groupby(["Workcentre", "Team leader"])["Hours"]
+            .sum()
+            .reset_index()
+        )
+        fig2 = px.pie(
+            team_leader_ratio,
+            names="Workcentre",
+            values="Hours",
+            hover_data=["Team leader"],
+            title="🧩 Hour Distribution by Team",
+            template=template_name
+        )
+    else:
+        team_ratio = df_week.groupby("Workcentre")["Hours"].sum().reset_index()
+        fig2 = px.pie(
+            team_ratio,
+            names="Workcentre", values="Hours",
+            title="🧩 Hour Distribution by Team", template=template_name
+        )
     st.plotly_chart(fig2, use_container_width=True)
 
-    # 🏗️ Team Allocation by Project
-    team_project = df_week.groupby(["Project name", "Workcentre"])["Hours"].sum().reset_index()
-    fig3 = px.bar(
-        team_project, x="Project name", y="Hours", color="Workcentre",
-        title="🏗️ Team Allocation by Project", template=template_name
-    )
+    # 🏗️ Team Allocation by Project (with Team leader)
+    if all(col in df_week.columns for col in ["Project name", "Workcentre", "Team leader"]):
+        team_project = (
+            df_week.groupby(["Project name", "Workcentre", "Team leader"])["Hours"]
+            .sum()
+            .reset_index()
+        )
+        fig3 = px.bar(
+            team_project,
+            x="Project name",
+            y="Hours",
+            color="Workcentre",
+            hover_data=["Team leader"],
+            title="🏗️ Team Allocation by Project",
+            template=template_name
+        )
+    else:
+        team_project = df_week.groupby(["Project name", "Workcentre"])["Hours"].sum().reset_index()
+        fig3 = px.bar(
+            team_project,
+            x="Project name",
+            y="Hours",
+            color="Workcentre",
+            title="🏗️ Team Allocation by Project",
+            template=template_name
+        )
     st.plotly_chart(fig3, use_container_width=True)
+
 
     # 👥 Biểu đồ Team + Leader + Employee (stacked)
     if all(col in df_week.columns for col in ['Team', 'Team leader', 'Employee']):
