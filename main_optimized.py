@@ -358,17 +358,17 @@ if df_raw.empty:
     st.stop()
     
 def create_hierarchy_chart(df, level="Full"):
-    full_path = ['Project name', 'Team', 'Workcentre', 'Task', 'Job', 'Employee']
-    if level == "Workcentre":
-        path_levels = ['Project name', 'Team', 'Workcentre']
-    elif level == "Task":
-        path_levels = ['Project name', 'Team', 'Workcentre', 'Task']
-    elif level == "Job":
-        path_levels = ['Project name', 'Team', 'Workcentre', 'Task', 'Job']
-    else:
-        path_levels = full_path
+    level_options = {
+        "Workcentre": ['Project name', 'Team', 'Workcentre'],
+        "Task": ['Project name', 'Team', 'Workcentre', 'Task'],
+        "Job": ['Project name', 'Team', 'Workcentre', 'Task', 'Job'],
+        "Employee": ['Project name', 'Team', 'Workcentre', 'Task', 'Job', 'Employee'],
+        "Full": ['Project name', 'Team', 'Workcentre', 'Task', 'Job', 'Employee']
+    }
 
+    path_levels = level_options.get(level, level_options["Full"])
     required_cols = path_levels + ['Hours']
+
     if df.empty or not all(col in df.columns for col in required_cols):
         return None
 
@@ -380,8 +380,8 @@ def create_hierarchy_chart(df, level="Full"):
         path=path_levels,
         values='Hours',
         hover_data=['Team leader'],
-        title=f"📌 Hierarchy View ({' → '.join(path_levels)})",
-        template='plotly'
+        title=f'📌 Hierarchical View: {" → ".join(path_levels)}',
+        template='plotly_white'
     )
     return fig
 
@@ -660,8 +660,15 @@ with tab_standard_report_main:
                 fig_workcentre = create_workcentre_chart(df_filtered_standard, standard_report_config)
                 if fig_workcentre:
                     st.plotly_chart(fig_workcentre, use_container_width=True)
-                    
-                fig_hierarchy = create_hierarchy_chart(df_filtered_standard, standard_report_config)
+                # Chọn cấp độ phân tích
+                st.markdown("### 🧭 Chọn cấp độ phân tích")
+                hierarchy_level = st.selectbox(
+                    "Chọn cấp phân tích cho biểu đồ phân cấp:",
+                    ["Workcentre", "Task", "Job", "Employee", "Full"],
+                    index=4,  # mặc định là 'Full'
+                    key="hierarchy_level_std"
+                )
+                fig_hierarchy = create_hierarchy_chart(df_filtered_standard, hierarchy_level)
                 if fig_hierarchy:
                     st.plotly_chart(fig_hierarchy, use_container_width=True)
                 st.markdown("---")
