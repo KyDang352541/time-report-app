@@ -357,35 +357,32 @@ if df_raw.empty:
     st.error(get_text('failed_to_load_raw_data'))
     st.stop()
     
-def create_hierarchy_chart(df):
-    path_levels = ['Project name', 'Team', 'Workcentre', 'Task', 'Job', 'Employee']
-    required_cols = path_levels + ['Hours']
+def create_hierarchy_chart(df, level="Full"):
+    full_path = ['Project name', 'Team', 'Workcentre', 'Task', 'Job', 'Employee']
+    if level == "Workcentre":
+        path_levels = ['Project name', 'Team', 'Workcentre']
+    elif level == "Task":
+        path_levels = ['Project name', 'Team', 'Workcentre', 'Task']
+    elif level == "Job":
+        path_levels = ['Project name', 'Team', 'Workcentre', 'Task', 'Job']
+    else:
+        path_levels = full_path
 
+    required_cols = path_levels + ['Hours']
     if df.empty or not all(col in df.columns for col in required_cols):
         return None
 
     if 'Team leader' not in df.columns:
         df['Team leader'] = 'Unknown'
 
-    if len(path_levels) > 5:
-        fig = px.treemap(
-            df,
-            path=path_levels,
-            values='Hours',
-            hover_data=['Team leader'],
-            title='📌 Hierarchical View (Project → ... → Employee)',
-            template='plotly_white'
-        )
-    else:
-        fig = px.sunburst(
-            df,
-            path=path_levels,
-            values='Hours',
-            hover_data=['Team leader'],
-            title='📌 Hierarchical View (Project → ... → Employee)',
-            template='plotly_white'
-        )
-
+    fig = px.treemap(
+        df,
+        path=path_levels,
+        values='Hours',
+        hover_data=['Team leader'],
+        title=f"📌 Hierarchy View ({' → '.join(path_levels)})",
+        template='plotly'
+    )
     return fig
 
 
